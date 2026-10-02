@@ -8,6 +8,10 @@ const accountManager = require('./core/account-manager');
 const aiContent = require('./core/ai-content');
 const { closeAccountBrowser } = require('./core/browser');
 
+const { postToWall } = require('./modules/post-wall');
+const { getGroupsByAccount, addGroup, deleteGroup, postToGroup } = require('./modules/post-group');
+const { autoInteractWall, autoInteractGroup } = require('./modules/interact');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -61,7 +65,6 @@ app.delete('/api/accounts/:id', (req, res) => {
 app.post('/api/accounts/:id/open-login', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    // Non-blocking response while browser opens
     accountManager.openLoginSession(id).catch(e => console.error('Login session error:', e));
     res.json({ success: true, message: 'Đang mở Chrome để bạn đăng nhập...' });
   } catch (err) {
@@ -84,6 +87,98 @@ app.post('/api/accounts/:id/close-browser', async (req, res) => {
     const id = parseInt(req.params.id);
     await closeAccountBrowser(id);
     res.json({ success: true, message: 'Đã đóng trình duyệt' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ========================
+// AUTOMATION POST & INTERACT
+// ========================
+app.post('/api/automation/post-wall', async (req, res) => {
+  try {
+    const { accountId, content, aiOptions } = req.body;
+    if (!accountId) return res.status(400).json({ success: false, error: 'Thiếu accountId' });
+    
+    // Execute async in background so HTTP response is instant, logs will report progress
+    postToWall({ accountId: parseInt(accountId), content, aiOptions })
+      .catch(e => console.error('Post wall error:', e));
+
+    res.json({ success: true, message: 'Đã gửi lệnh đăng bài lên tường! Trình duyệt đang thực hiện.' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/automation/post-group', async (req, res) => {
+  try {
+    const { accountId, groupUrl, content, aiOptions } = req.body;
+    if (!accountId || !groupUrl) return res.status(400).json({ success: false, error: 'Thiếu accountId hoặc link nhóm' });
+
+    postToGroup({ accountId: parseInt(accountId), groupUrl, content, aiOptions })
+      .catch(e => console.error('Post group error:', e));
+
+    res.json({ success: true, message: 'Đã gửi lệnh đăng bài vào nhóm! Trình duyệt đang thực hiện.' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/automation/interact-wall', async (req, res) => {
+  try {
+    const { accountId, maxLikes } = req.body;
+    if (!accountId) return res.status(400).json({ success: false, error: 'Thiếu accountId' });
+
+    autoInteractWall({ accountId: parseInt(accountId), maxLikes: maxLikes || 5 })
+      .catch(e => console.error('Interact wall error:', e));
+
+    res.json({ success: true, message: 'Đang tự động tương tác like bài trên newsfeed...' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/automation/interact-group', async (req, res) => {
+  try {
+    const { accountId, groupUrl, maxLikes } = req.body;
+    if (!accountId || !groupUrl) return res.status(400).json({ success: false, error: 'Thiếu accountId hoặc URL nhóm' });
+
+    autoInteractGroup({ accountId: parseInt(accountId), groupUrl, maxLikes: maxLikes || 3 })
+      .catch(e => console.error('Interact group error:', e));
+
+    res.json({ success: true, message: 'Đang tự động tương tác trong nhóm...' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ========================
+// GROUPS API
+// ========================
+app.get('/api/accounts/:id/groups', (req, res) => {
+  try {
+    const groups = getGroupsByAccount(parseInt(req.params.id));
+    res.json({ success: true, data: groups });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/accounts/:id/groups', (req, res) => {
+  try {
+    const { name, url } = req.body;
+    if (!url) return res.status(400).json({ success: false, error: 'Link nhóm không được rỗng' });
+    const g = addGroup(parseInt(req.params.id), name || 'Nhóm Facebook', url.trim());
+    res.json({ success: true, data: g });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.delete('/api/groups/:id', (req, res) => {
+  try {
+    deleteGroup(parseInt(req.params.id));
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

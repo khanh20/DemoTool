@@ -26,6 +26,10 @@
           <span class="icon">👥</span>
           <span>Quản lý Tài Khoản</span>
         </button>
+        <button class="nav-item" data-tab="automation">
+          <span class="icon">🚀</span>
+          <span>Tác Vụ Đăng & Tương Tác</span>
+        </button>
         <button class="nav-item" data-tab="ai-prompts">
           <span class="icon">✨</span>
           <span>AI Prompts (Gemini)</span>
@@ -97,10 +101,118 @@
         </div>
       </section>
 
-      <!-- TAB 2: AI PROMPTS -->
+      <!-- TAB 2: AUTOMATION (POST & INTERACT) -->
+      <section id="tab-automation" class="tab-pane">
+        <div class="grid-2col">
+          <!-- Post to Wall Card -->
+          <div class="card">
+            <div class="card-header">
+              <h3>📝 Đăng Bài Lên Tường (AI Tự Sinh Hoặc Tự Viết)</h3>
+            </div>
+            <div class="card-body">
+              <div class="form-group">
+                <label>Chọn Tài Khoản Facebook Thực Hiện</label>
+                <select id="wallSelectAccount" class="form-input"></select>
+              </div>
+              <div class="form-group">
+                <label>Phương thức soạn bài</label>
+                <select id="wallPostMode" class="form-input">
+                  <option value="ai">✨ Để Gemini AI tự sinh bài tự nhiên</option>
+                  <option value="custom">✏️ Nhập nội dung tự soạn thủ công</option>
+                </select>
+              </div>
+              <div id="wallAiConfig">
+                <div class="form-group">
+                  <label>Chọn Mẫu Prompt AI</label>
+                  <select id="wallPromptSelect" class="form-input"></select>
+                </div>
+                <div class="form-group">
+                  <label>Ghi chú ngữ cảnh thêm (Tùy chọn)</label>
+                  <input type="text" id="wallContextExtra" class="form-input" placeholder="Ví dụ: Giảm giá ngày cuối tuần...">
+                </div>
+              </div>
+              <div id="wallCustomConfig" style="display: none;">
+                <div class="form-group">
+                  <label>Nội dung bài viết</label>
+                  <textarea id="wallCustomText" class="form-input" rows="4" placeholder="Nhập nội dung bài đăng..."></textarea>
+                </div>
+              </div>
+              <button id="btnExecutePostWall" class="btn btn-primary w-full">🚀 Bắt Đầu Đăng Lên Tường</button>
+            </div>
+          </div>
+
+          <!-- Post to Group Card -->
+          <div class="card">
+            <div class="card-header">
+              <h3>👥 Đăng Bài Vào Hội Nhóm (Group)</h3>
+            </div>
+            <div class="card-body">
+              <div class="form-group">
+                <label>Chọn Tài Khoản Facebook Thực Hiện</label>
+                <select id="groupSelectAccount" class="form-input"></select>
+              </div>
+              <div class="form-group">
+                <label>Link Nhóm Facebook (URL)</label>
+                <input type="text" id="groupTargetUrl" class="form-input" placeholder="https://www.facebook.com/groups/123456789">
+              </div>
+              <div class="form-group">
+                <label>Chọn Mẫu Prompt AI Cho Nhóm</label>
+                <select id="groupPromptSelect" class="form-input"></select>
+              </div>
+              <div class="form-group">
+                <label>Nội dung cần nhấn mạnh (AI sẽ lồng ghép khéo léo)</label>
+                <textarea id="groupContextExtra" class="form-input" rows="3" placeholder="Chia sẻ kinh nghiệm làm đẹp, giải đáp thắc mắc và giới thiệu dịch vụ"></textarea>
+              </div>
+              <button id="btnExecutePostGroup" class="btn btn-primary w-full">🚀 Bắt Đầu Đăng Vào Nhóm</button>
+            </div>
+          </div>
+
+          <!-- Auto Like Wall Card -->
+          <div class="card">
+            <div class="card-header">
+              <h3>👍 Tương Tác Khách Hàng (Auto Like Feed)</h3>
+            </div>
+            <div class="card-body">
+              <div class="form-group">
+                <label>Chọn Tài Khoản Facebook</label>
+                <select id="likeSelectAccount" class="form-input"></select>
+              </div>
+              <div class="form-group">
+                <label>Số lượng bài viết sẽ like (Khuyến nghị 3 - 5 bài/lần)</label>
+                <input type="number" id="likeCount" class="form-input" value="5" min="1" max="10">
+              </div>
+              <p class="helper-text mb-3">Tool sẽ cuộn trang tự nhiên và like các bài viết của bạn bè/khách hàng với khoảng nghỉ ngẫu nhiên chống checkpoint.</p>
+              <button id="btnExecuteLikeWall" class="btn btn-success w-full">❤️ Chạy Tương Tác Like Feed</button>
+            </div>
+          </div>
+
+          <!-- Auto Like Group Card -->
+          <div class="card">
+            <div class="card-header">
+              <h3>🤝 Tương Tác Hội Nhóm (Auto Like Trong Group)</h3>
+            </div>
+            <div class="card-body">
+              <div class="form-group">
+                <label>Chọn Tài Khoản Facebook</label>
+                <select id="groupLikeSelectAccount" class="form-input"></select>
+              </div>
+              <div class="form-group">
+                <label>Link Nhóm Cần Tương Tác</label>
+                <input type="text" id="groupLikeUrl" class="form-input" placeholder="https://www.facebook.com/groups/...">
+              </div>
+              <div class="form-group">
+                <label>Số lượng like trong nhóm</label>
+                <input type="number" id="groupLikeCount" class="form-input" value="3" min="1" max="6">
+              </div>
+              <button id="btnExecuteLikeGroup" class="btn btn-success w-full">❤️ Chạy Tương Tác Trong Nhóm</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: AI PROMPTS -->
       <section id="tab-ai-prompts" class="tab-pane">
         <div class="grid-2col">
-          <!-- Prompt Creator -->
           <div class="card">
             <div class="card-header">
               <h3>✨ Tạo Mẫu Prompt Bài Đăng (Gemini)</h3>
@@ -132,7 +244,6 @@
             </div>
           </div>
 
-          <!-- Preview & Prompt List -->
           <div class="col-stack">
             <div class="card" id="aiResultCard">
               <div class="card-header">
@@ -159,7 +270,7 @@
         </div>
       </section>
 
-      <!-- TAB 3: LOGS -->
+      <!-- TAB 4: LOGS -->
       <section id="tab-logs" class="tab-pane">
         <div class="card">
           <div class="card-header">
@@ -176,7 +287,7 @@
         </div>
       </section>
 
-      <!-- TAB 4: SETTINGS -->
+      <!-- TAB 5: SETTINGS -->
       <section id="tab-settings" class="tab-pane">
         <div class="card max-w-600">
           <div class="card-header">

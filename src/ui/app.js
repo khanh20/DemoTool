@@ -34,6 +34,31 @@ const promptsList = document.getElementById('promptsList');
 
 const logsContainer = document.getElementById('logsContainer');
 
+// Automation Elements
+const wallSelectAccount = document.getElementById('wallSelectAccount');
+const wallPostMode = document.getElementById('wallPostMode');
+const wallAiConfig = document.getElementById('wallAiConfig');
+const wallPromptSelect = document.getElementById('wallPromptSelect');
+const wallContextExtra = document.getElementById('wallContextExtra');
+const wallCustomConfig = document.getElementById('wallCustomConfig');
+const wallCustomText = document.getElementById('wallCustomText');
+const btnExecutePostWall = document.getElementById('btnExecutePostWall');
+
+const groupSelectAccount = document.getElementById('groupSelectAccount');
+const groupTargetUrl = document.getElementById('groupTargetUrl');
+const groupPromptSelect = document.getElementById('groupPromptSelect');
+const groupContextExtra = document.getElementById('groupContextExtra');
+const btnExecutePostGroup = document.getElementById('btnExecutePostGroup');
+
+const likeSelectAccount = document.getElementById('likeSelectAccount');
+const likeCount = document.getElementById('likeCount');
+const btnExecuteLikeWall = document.getElementById('btnExecuteLikeWall');
+
+const groupLikeSelectAccount = document.getElementById('groupLikeSelectAccount');
+const groupLikeUrl = document.getElementById('groupLikeUrl');
+const groupLikeCount = document.getElementById('groupLikeCount');
+const btnExecuteLikeGroup = document.getElementById('btnExecuteLikeGroup');
+
 // NAVIGATION
 navItems.forEach(item => {
   item.addEventListener('click', () => {
@@ -45,12 +70,16 @@ navItems.forEach(item => {
     item.classList.add('active');
     document.getElementById(`tab-${tabName}`).classList.add('active');
 
-    // Update titles
     switch (tabName) {
       case 'accounts':
         pageHeading.textContent = 'Quản lý Tài Khoản Facebook';
         pageSubheading.textContent = 'Quản lý profile độc lập, mở Chrome hiển thị, tự lưu Cookie';
         loadAccounts();
+        break;
+      case 'automation':
+        pageHeading.textContent = 'Tác Vụ Tự Động Hóa';
+        pageSubheading.textContent = 'Đăng bài lên tường, đăng vào group, tương tác like/comment an toàn';
+        populateAutomationSelects();
         break;
       case 'ai-prompts':
         pageHeading.textContent = 'AI Prompts Sinh Bài Tự Động';
@@ -71,7 +100,6 @@ navItems.forEach(item => {
   });
 });
 
-// TOAST NOTIFICATION
 function showToast(msg, isError = false) {
   const toast = document.getElementById('toast');
   toast.textContent = msg;
@@ -92,6 +120,7 @@ async function loadAccounts() {
     if (json.success) {
       accounts = json.data;
       renderAccountsTable();
+      populateAutomationSelects();
     }
   } catch (err) {
     showToast('Không tải được danh sách nick', true);
@@ -156,7 +185,6 @@ function renderAccountsTable() {
   }).join('');
 }
 
-// Open Chrome for user login
 window.openLoginBrowser = async function(id) {
   showToast('Đang khởi chạy Chrome...');
   try {
@@ -164,7 +192,6 @@ window.openLoginBrowser = async function(id) {
     const json = await res.json();
     if (json.success) {
       showToast('Đã mở Chrome! Hãy đăng nhập trên trình duyệt vừa xuất hiện.');
-      // Auto refresh list after 10s to see if status updated
       setTimeout(loadAccounts, 10000);
     } else {
       showToast(json.error || 'Lỗi mở trình duyệt', true);
@@ -216,7 +243,6 @@ window.deleteAccount = async function(id) {
   }
 };
 
-// Modal handlers
 btnOpenAddAccount.addEventListener('click', () => {
   document.getElementById('accName').value = '';
   document.getElementById('accEmail').value = '';
@@ -262,6 +288,152 @@ btnSubmitAddAccount.addEventListener('click', async () => {
 });
 
 // ==========================
+// AUTOMATION LOGIC
+// ==========================
+function populateAutomationSelects() {
+  const accountOptions = accounts.map(a => `<option value="${a.id}">${escapeHtml(a.name)} (ID: ${a.id})</option>`).join('');
+  wallSelectAccount.innerHTML = accountOptions;
+  groupSelectAccount.innerHTML = accountOptions;
+  likeSelectAccount.innerHTML = accountOptions;
+  groupLikeSelectAccount.innerHTML = accountOptions;
+
+  const wallPrompts = prompts.filter(p => p.target_type === 'wall');
+  const groupPrompts = prompts.filter(p => p.target_type === 'group');
+
+  wallPromptSelect.innerHTML = (wallPrompts.length > 0 ? wallPrompts : prompts).map(p => `<option value="${p.id}">${escapeHtml(p.title)}</option>`).join('') || '<option value="">(Chưa có prompt)</option>';
+  groupPromptSelect.innerHTML = (groupPrompts.length > 0 ? groupPrompts : prompts).map(p => `<option value="${p.id}">${escapeHtml(p.title)}</option>`).join('') || '<option value="">(Chưa có prompt)</option>';
+}
+
+wallPostMode.addEventListener('change', () => {
+  if (wallPostMode.value === 'ai') {
+    wallAiConfig.style.display = 'block';
+    wallCustomConfig.style.display = 'none';
+  } else {
+    wallAiConfig.style.display = 'none';
+    wallCustomConfig.style.display = 'block';
+  }
+});
+
+btnExecutePostWall.addEventListener('click', async () => {
+  const accountId = wallSelectAccount.value;
+  if (!accountId) {
+    alert('Vui lòng chọn tài khoản!');
+    return;
+  }
+
+  const mode = wallPostMode.value;
+  let payload = { accountId };
+
+  if (mode === 'custom') {
+    const text = wallCustomText.value.trim();
+    if (!text) return alert('Vui lòng nhập nội dung');
+    payload.content = text;
+  } else {
+    const promptId = parseInt(wallPromptSelect.value);
+    const p = prompts.find(item => item.id === promptId);
+    if (!p) return alert('Vui lòng tạo mẫu Prompt AI trước!');
+    payload.aiOptions = {
+      systemInstruction: p.system_instruction,
+      userContext: (p.user_context || '') + (wallContextExtra.value ? `\nLưu ý thêm: ${wallContextExtra.value}` : '')
+    };
+  }
+
+  showToast('Đang khởi chạy Chrome và đăng bài lên tường...');
+  try {
+    const res = await fetch('/api/automation/post-wall', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const json = await res.json();
+    if (json.success) {
+      showToast(json.message);
+    } else {
+      showToast(json.error, true);
+    }
+  } catch (e) {
+    showToast(e.message, true);
+  }
+});
+
+btnExecutePostGroup.addEventListener('click', async () => {
+  const accountId = groupSelectAccount.value;
+  const groupUrl = groupTargetUrl.value.trim();
+  if (!accountId || !groupUrl) return alert('Vui lòng nhập chọn tài khoản và link nhóm!');
+
+  const promptId = parseInt(groupPromptSelect.value);
+  const p = prompts.find(item => item.id === promptId);
+
+  const payload = {
+    accountId,
+    groupUrl,
+    aiOptions: p ? {
+      systemInstruction: p.system_instruction,
+      userContext: (p.user_context || '') + (groupContextExtra.value ? `\nLưu ý: ${groupContextExtra.value}` : '')
+    } : {
+      systemInstruction: 'Viết bài chia sẻ hữu ích trong hội nhóm Facebook',
+      userContext: groupContextExtra.value
+    }
+  };
+
+  showToast('Đang mở Chrome để đăng bài vào nhóm...');
+  try {
+    const res = await fetch('/api/automation/post-group', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const json = await res.json();
+    if (json.success) {
+      showToast(json.message);
+    } else {
+      showToast(json.error, true);
+    }
+  } catch (e) {
+    showToast(e.message, true);
+  }
+});
+
+btnExecuteLikeWall.addEventListener('click', async () => {
+  const accountId = likeSelectAccount.value;
+  const maxLikes = parseInt(likeCount.value) || 5;
+  if (!accountId) return alert('Vui lòng chọn tài khoản!');
+
+  showToast('Bắt đầu tự động tương tác like newsfeed...');
+  try {
+    const res = await fetch('/api/automation/interact-wall', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accountId, maxLikes })
+    });
+    const json = await res.json();
+    showToast(json.message);
+  } catch (e) {
+    showToast(e.message, true);
+  }
+});
+
+btnExecuteLikeGroup.addEventListener('click', async () => {
+  const accountId = groupLikeSelectAccount.value;
+  const groupUrl = groupLikeUrl.value.trim();
+  const maxLikes = parseInt(groupLikeCount.value) || 3;
+  if (!accountId || !groupUrl) return alert('Vui lòng chọn tài khoản và nhập link nhóm');
+
+  showToast('Bắt đầu tự động tương tác trong nhóm...');
+  try {
+    const res = await fetch('/api/automation/interact-group', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accountId, groupUrl, maxLikes })
+    });
+    const json = await res.json();
+    showToast(json.message);
+  } catch (e) {
+    showToast(e.message, true);
+  }
+});
+
+// ==========================
 // AI & PROMPT LOGIC
 // ==========================
 async function loadPrompts() {
@@ -271,6 +443,7 @@ async function loadPrompts() {
     if (json.success) {
       prompts = json.data;
       renderPromptsList();
+      populateAutomationSelects();
     }
   } catch (err) {
     showToast('Lỗi tải danh sách prompts', true);
@@ -458,6 +631,7 @@ async function loadLogs() {
 // REFRESH BUTTON
 btnRefresh.addEventListener('click', () => {
   loadAccounts();
+  loadPrompts();
   loadLogs();
   showToast('Đã làm mới dữ liệu');
 });
@@ -476,4 +650,5 @@ function escapeHtml(str) {
 
 // INITIAL LOAD
 loadAccounts();
+loadPrompts();
 loadSettings();
