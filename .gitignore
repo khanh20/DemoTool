@@ -20,6 +20,12 @@ playwright-report/
 blob-report/
 playwright/.cache/
 
+# Agent & Skills local installations
+.agents/
+.agent/
+skills/
+skills-lock.json
+
 # OS and Editor files
 .DS_Store
 Thumbs.db
