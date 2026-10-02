@@ -3,10 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Facebook Automation Manager</title>
+  <title>FB Commander - Multi-Account Automation</title>
+  
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Phosphor Icons (Official Library as specified in design-taste-frontend skill) -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -14,33 +20,35 @@
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="brand">
-        <div class="logo-icon">⚡</div>
+        <div class="logo-icon">
+          <i class="ph-bold ph-terminal-window"></i>
+        </div>
         <div class="brand-text">
           <h2>FB Commander</h2>
-          <span>AI Multi-Account Tool</span>
+          <span>Professional Automation</span>
         </div>
       </div>
 
       <nav class="nav-menu">
         <button class="nav-item active" data-tab="accounts">
-          <span class="icon">👥</span>
-          <span>Quản lý Tài Khoản</span>
+          <i class="ph-bold ph-users"></i>
+          <span>Tài Khoản Facebook</span>
         </button>
         <button class="nav-item" data-tab="automation">
-          <span class="icon">🚀</span>
-          <span>Tác Vụ Đăng & Tương Tác</span>
+          <i class="ph-bold ph-paper-plane-tilt"></i>
+          <span>Tác Vụ Tự Động Hóa</span>
         </button>
         <button class="nav-item" data-tab="ai-prompts">
-          <span class="icon">✨</span>
-          <span>AI Prompts (Gemini)</span>
+          <i class="ph-bold ph-sparkle"></i>
+          <span>Mẫu Prompt Gemini</span>
         </button>
         <button class="nav-item" data-tab="logs">
-          <span class="icon">📜</span>
-          <span>Nhật ký & Lịch sử</span>
+          <i class="ph-bold ph-clock-counter-clockwise"></i>
+          <span>Nhật Ký Hoạt Động</span>
         </button>
         <button class="nav-item" data-tab="settings">
-          <span class="icon">⚙️</span>
-          <span>Cấu hình Hệ thống</span>
+          <i class="ph-bold ph-gear-six"></i>
+          <span>Cấu Hình Hệ Thống</span>
         </button>
       </nav>
 
@@ -59,11 +67,11 @@
       <header class="topbar">
         <div class="page-title">
           <h1 id="pageHeading">Quản lý Tài Khoản Facebook</h1>
-          <p id="pageSubheading">Quản lý 3 - 10 profile độc lập, lưu phiên đăng nhập tự động</p>
+          <p id="pageSubheading">Quản lý các profile độc lập, mở Chrome hiển thị, lưu session an toàn</p>
         </div>
         <div class="topbar-actions">
           <button id="btnRefresh" class="btn btn-secondary">
-            <span>🔄</span> Làm mới
+            <i class="ph-bold ph-arrows-clockwise"></i> Làm mới
           </button>
         </div>
       </header>
@@ -72,7 +80,7 @@
       <section id="tab-accounts" class="tab-pane active">
         <div class="action-bar">
           <button id="btnOpenAddAccount" class="btn btn-primary">
-            <span>➕</span> Thêm Tài Khoản Mới
+            <i class="ph-bold ph-plus"></i> Thêm Tài Khoản Mới
           </button>
           <div class="stat-pills">
             <span class="pill" id="totalAccountsPill">Tổng: 0 nick</span>
@@ -89,7 +97,7 @@
                 <th>Email / UID</th>
                 <th>Trạng Thái</th>
                 <th>Proxy</th>
-                <th>Hành Động Trình Duyệt</th>
+                <th>Thao Tác Trình Duyệt</th>
               </tr>
             </thead>
             <tbody id="accountsTableBody">
@@ -107,18 +115,18 @@
           <!-- Post to Wall Card -->
           <div class="card">
             <div class="card-header">
-              <h3>📝 Đăng Bài Lên Tường (AI Tự Sinh Hoặc Tự Viết)</h3>
+              <h3><i class="ph-bold ph-note-pencil"></i> Đăng Bài Lên Tường (Personal Wall)</h3>
             </div>
             <div class="card-body">
               <div class="form-group">
-                <label>Chọn Tài Khoản Facebook Thực Hiện</label>
+                <label>Chọn Tài Khoản Facebook</label>
                 <select id="wallSelectAccount" class="form-input"></select>
               </div>
               <div class="form-group">
-                <label>Phương thức soạn bài</label>
+                <label>Phương thức soạn nội dung</label>
                 <select id="wallPostMode" class="form-input">
-                  <option value="ai">✨ Để Gemini AI tự sinh bài tự nhiên</option>
-                  <option value="custom">✏️ Nhập nội dung tự soạn thủ công</option>
+                  <option value="ai">Tự động sinh nội dung tự nhiên qua Gemini AI</option>
+                  <option value="custom">Nhập nội dung thủ công</option>
                 </select>
               </div>
               <div id="wallAiConfig">
@@ -127,7 +135,7 @@
                   <select id="wallPromptSelect" class="form-input"></select>
                 </div>
                 <div class="form-group">
-                  <label>Ghi chú ngữ cảnh thêm (Tùy chọn)</label>
+                  <label>Ngữ cảnh bổ sung (Tùy chọn)</label>
                   <input type="text" id="wallContextExtra" class="form-input" placeholder="Ví dụ: Giảm giá ngày cuối tuần...">
                 </div>
               </div>
@@ -137,74 +145,82 @@
                   <textarea id="wallCustomText" class="form-input" rows="4" placeholder="Nhập nội dung bài đăng..."></textarea>
                 </div>
               </div>
-              <button id="btnExecutePostWall" class="btn btn-primary w-full">🚀 Bắt Đầu Đăng Lên Tường</button>
+              <button id="btnExecutePostWall" class="btn btn-primary w-full">
+                <i class="ph-bold ph-paper-plane-right"></i> Bắt Đầu Đăng Lên Tường
+              </button>
             </div>
           </div>
 
           <!-- Post to Group Card -->
           <div class="card">
             <div class="card-header">
-              <h3>👥 Đăng Bài Vào Hội Nhóm (Group)</h3>
+              <h3><i class="ph-bold ph-users-three"></i> Đăng Bài Vào Hội Nhóm (Facebook Groups)</h3>
             </div>
             <div class="card-body">
               <div class="form-group">
-                <label>Chọn Tài Khoản Facebook Thực Hiện</label>
+                <label>Chọn Tài Khoản Facebook</label>
                 <select id="groupSelectAccount" class="form-input"></select>
               </div>
               <div class="form-group">
-                <label>Link Nhóm Facebook (URL)</label>
+                <label>Đường dẫn Nhóm Facebook (URL)</label>
                 <input type="text" id="groupTargetUrl" class="form-input" placeholder="https://www.facebook.com/groups/123456789">
               </div>
               <div class="form-group">
-                <label>Chọn Mẫu Prompt AI Cho Nhóm</label>
+                <label>Chọn Mẫu Prompt AI</label>
                 <select id="groupPromptSelect" class="form-input"></select>
               </div>
               <div class="form-group">
-                <label>Nội dung cần nhấn mạnh (AI sẽ lồng ghép khéo léo)</label>
-                <textarea id="groupContextExtra" class="form-input" rows="3" placeholder="Chia sẻ kinh nghiệm làm đẹp, giải đáp thắc mắc và giới thiệu dịch vụ"></textarea>
+                <label>Chủ đề trọng tâm (AI sẽ lồng ghép tự nhiên)</label>
+                <textarea id="groupContextExtra" class="form-input" rows="3" placeholder="Chia sẻ kinh nghiệm hữu ích, khéo léo giới thiệu sản phẩm..."></textarea>
               </div>
-              <button id="btnExecutePostGroup" class="btn btn-primary w-full">🚀 Bắt Đầu Đăng Vào Nhóm</button>
+              <button id="btnExecutePostGroup" class="btn btn-primary w-full">
+                <i class="ph-bold ph-paper-plane-right"></i> Bắt Đầu Đăng Vào Nhóm
+              </button>
             </div>
           </div>
 
           <!-- Auto Like Wall Card -->
           <div class="card">
             <div class="card-header">
-              <h3>👍 Tương Tác Khách Hàng (Auto Like Feed)</h3>
+              <h3><i class="ph-bold ph-thumbs-up"></i> Tương Tác Bảng Tin (Auto Like Feed)</h3>
             </div>
             <div class="card-body">
               <div class="form-group">
-                <label>Chọn Tài Khoản Facebook</label>
+                <label>Chọn Tài Khoản Thực Hiện</label>
                 <select id="likeSelectAccount" class="form-input"></select>
               </div>
               <div class="form-group">
-                <label>Số lượng bài viết sẽ like (Khuyến nghị 3 - 5 bài/lần)</label>
+                <label>Số lượng bài viết tương tác (Khuyến nghị 3 - 5 bài/lần)</label>
                 <input type="number" id="likeCount" class="form-input" value="5" min="1" max="10">
               </div>
-              <p class="helper-text mb-3">Tool sẽ cuộn trang tự nhiên và like các bài viết của bạn bè/khách hàng với khoảng nghỉ ngẫu nhiên chống checkpoint.</p>
-              <button id="btnExecuteLikeWall" class="btn btn-success w-full">❤️ Chạy Tương Tác Like Feed</button>
+              <p class="helper-text mb-3">Tự động cuộn trang theo tốc độ người thật và thả like với khoảng nghỉ ngẫu nhiên để bảo vệ tài khoản.</p>
+              <button id="btnExecuteLikeWall" class="btn btn-secondary w-full">
+                <i class="ph-bold ph-heart"></i> Bắt Đầu Tương Tác Bảng Tin
+              </button>
             </div>
           </div>
 
           <!-- Auto Like Group Card -->
           <div class="card">
             <div class="card-header">
-              <h3>🤝 Tương Tác Hội Nhóm (Auto Like Trong Group)</h3>
+              <h3><i class="ph-bold ph-chats-circle"></i> Tương Tác Trong Nhóm (Group Engagement)</h3>
             </div>
             <div class="card-body">
               <div class="form-group">
-                <label>Chọn Tài Khoản Facebook</label>
+                <label>Chọn Tài Khoản Thực Hiện</label>
                 <select id="groupLikeSelectAccount" class="form-input"></select>
               </div>
               <div class="form-group">
-                <label>Link Nhóm Cần Tương Tác</label>
+                <label>Đường dẫn Nhóm Cần Tương Tác</label>
                 <input type="text" id="groupLikeUrl" class="form-input" placeholder="https://www.facebook.com/groups/...">
               </div>
               <div class="form-group">
-                <label>Số lượng like trong nhóm</label>
+                <label>Số lượt like trong nhóm</label>
                 <input type="number" id="groupLikeCount" class="form-input" value="3" min="1" max="6">
               </div>
-              <button id="btnExecuteLikeGroup" class="btn btn-success w-full">❤️ Chạy Tương Tác Trong Nhóm</button>
+              <button id="btnExecuteLikeGroup" class="btn btn-secondary w-full">
+                <i class="ph-bold ph-heart"></i> Bắt Đầu Tương Tác Trong Nhóm
+              </button>
             </div>
           </div>
         </div>
@@ -215,7 +231,7 @@
         <div class="grid-2col">
           <div class="card">
             <div class="card-header">
-              <h3>✨ Tạo Mẫu Prompt Bài Đăng (Gemini)</h3>
+              <h3><i class="ph-bold ph-sparkle"></i> Tạo Mẫu Prompt Bài Đăng (Gemini AI)</h3>
             </div>
             <div class="card-body">
               <div class="form-group">
@@ -238,8 +254,12 @@
                 <textarea id="promptContext" class="form-input" rows="3" placeholder="Giới thiệu đầm hoa nhí vừa về hàng, tặng voucher 15% cho 5 khách đầu tiên inbox"></textarea>
               </div>
               <div class="form-actions">
-                <button id="btnSavePrompt" class="btn btn-primary">💾 Lưu Prompt</button>
-                <button id="btnTestAI" class="btn btn-secondary">⚡ Thử Nghiệm Sinh Bài Bằng AI</button>
+                <button id="btnSavePrompt" class="btn btn-primary">
+                  <i class="ph-bold ph-floppy-disk"></i> Lưu Prompt
+                </button>
+                <button id="btnTestAI" class="btn btn-secondary">
+                  <i class="ph-bold ph-lightning"></i> Thử Nghiệm Sinh Bài
+                </button>
               </div>
             </div>
           </div>
@@ -247,18 +267,18 @@
           <div class="col-stack">
             <div class="card" id="aiResultCard">
               <div class="card-header">
-                <h3>📝 Kết quả AI Gemini sinh ra</h3>
+                <h3><i class="ph-bold ph-file-text"></i> Bản Xem Trước Nội Dung AI</h3>
               </div>
               <div class="card-body">
                 <div id="aiOutputContent" class="preview-box">
-                  Nhấn "Thử Nghiệm Sinh Bài Bằng AI" để xem mẫu bài viết được tạo theo thời gian thực...
+                  Nhấn "Thử Nghiệm Sinh Bài" để xem mẫu bài viết được tạo theo thời gian thực...
                 </div>
               </div>
             </div>
 
             <div class="card">
               <div class="card-header">
-                <h3>📂 Danh sách Prompt đã lưu</h3>
+                <h3><i class="ph-bold ph-folder-simple"></i> Danh Sách Prompt Đã Lưu</h3>
               </div>
               <div class="card-body">
                 <div id="promptsList" class="prompts-list">
@@ -274,7 +294,7 @@
       <section id="tab-logs" class="tab-pane">
         <div class="card">
           <div class="card-header">
-            <h3>📜 Nhật ký hoạt động hệ thống</h3>
+            <h3><i class="ph-bold ph-list-dashes"></i> Nhật Ký Hoạt Động Hệ Thống</h3>
           </div>
           <div class="card-body">
             <div class="logs-container" id="logsContainer">
@@ -291,7 +311,7 @@
       <section id="tab-settings" class="tab-pane">
         <div class="card max-w-600">
           <div class="card-header">
-            <h3>🔑 Cấu Hình Google Gemini API Key</h3>
+            <h3><i class="ph-bold ph-key"></i> Cấu Hình Google Gemini API Key</h3>
           </div>
           <div class="card-body">
             <p class="helper-text">

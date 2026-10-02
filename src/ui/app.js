@@ -167,16 +167,16 @@ function renderAccountsTable() {
         <td>
           <div class="table-actions">
             <button class="btn btn-primary btn-sm" onclick="openLoginBrowser(${acc.id})" title="Mở trình duyệt Chrome hiển thị">
-              🌐 Mở Chrome Đăng Nhập
+              <i class="ph-bold ph-globe"></i> Mở Chrome
             </button>
             <button class="btn btn-secondary btn-sm" onclick="checkStatus(${acc.id})" title="Kiểm tra trạng thái Cookie">
-              🔍 Check
+              <i class="ph-bold ph-magnifying-glass"></i> Check
             </button>
             <button class="btn btn-secondary btn-sm" onclick="closeBrowser(${acc.id})" title="Đóng Chrome">
-              ✖️ Đóng
+              <i class="ph-bold ph-x"></i>
             </button>
             <button class="btn btn-danger btn-sm" onclick="deleteAccount(${acc.id})" title="Xóa tài khoản">
-              🗑️
+              <i class="ph-bold ph-trash"></i>
             </button>
           </div>
         </td>
@@ -563,9 +563,9 @@ async function loadSettings() {
     const json = await res.json();
     if (json.success) {
       if (json.hasKey) {
-        keyStatusBadge.innerHTML = `<span class="badge badge-active">✅ Đã cấu hình Key (${json.maskedKey})</span>`;
+        keyStatusBadge.innerHTML = `<span class="badge badge-active"><i class="ph-bold ph-check-circle"></i> Đã cấu hình Key (${json.maskedKey})</span>`;
       } else {
-        keyStatusBadge.innerHTML = '<span class="badge badge-unverified">⚠️ Chưa cài đặt Key (Chưa thể dùng AI)</span>';
+        keyStatusBadge.innerHTML = '<span class="badge badge-unverified"><i class="ph-bold ph-warning-circle"></i> Chưa cài đặt Key (Chưa thể dùng AI)</span>';
       }
     }
   } catch (e) {}

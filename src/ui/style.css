@@ -154,9 +154,13 @@ body {
   border-left: 2.5px solid var(--primary);
 }
 
-.nav-item .icon {
-  font-size: 16px;
-  opacity: 0.85;
+.nav-item i {
+  font-size: 18px;
+  opacity: 0.9;
+}
+
+.btn i {
+  font-size: 15px;
 }
 
 .system-status-card {
