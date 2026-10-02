@@ -1,6 +1,8 @@
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const cors = require('cors');
+const multer = require('multer');
 require('dotenv').config();
 
 const db = require('./core/database');
@@ -15,9 +17,40 @@ const { autoInteractWall, autoInteractGroup } = require('./modules/interact');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Setup upload folder for images
+const uploadsDir = path.join(__dirname, '..', 'data', 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadsDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `img_${Date.now()}_${Math.round(Math.random() * 1E6)}${ext}`);
+  }
+});
+const upload = multer({ storage });
+
 app.use(cors());
 app.use(express.json());
+app.use('/uploads', express.static(uploadsDir));
 app.use(express.static(path.join(__dirname, 'ui')));
+
+// ========================
+// FILE UPLOAD API
+// ========================
+app.post('/api/upload', upload.array('images', 5), (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ success: false, error: 'Không có ảnh nào được gửi lên' });
+    }
+    const filePaths = req.files.map(f => f.path);
+    res.json({ success: true, filePaths });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 
 // ========================
 // ACCOUNTS API
@@ -97,11 +130,10 @@ app.post('/api/accounts/:id/close-browser', async (req, res) => {
 // ========================
 app.post('/api/automation/post-wall', async (req, res) => {
   try {
-    const { accountId, content, aiOptions } = req.body;
+    const { accountId, content, imagePaths, aiOptions } = req.body;
     if (!accountId) return res.status(400).json({ success: false, error: 'Thiếu accountId' });
     
-    // Execute async in background so HTTP response is instant, logs will report progress
-    postToWall({ accountId: parseInt(accountId), content, aiOptions })
+    postToWall({ accountId: parseInt(accountId), content, imagePaths: imagePaths || [], aiOptions })
       .catch(e => console.error('Post wall error:', e));
 
     res.json({ success: true, message: 'Đã gửi lệnh đăng bài lên tường! Trình duyệt đang thực hiện.' });
@@ -112,10 +144,10 @@ app.post('/api/automation/post-wall', async (req, res) => {
 
 app.post('/api/automation/post-group', async (req, res) => {
   try {
-    const { accountId, groupUrl, content, aiOptions } = req.body;
+    const { accountId, groupUrl, content, imagePaths, aiOptions } = req.body;
     if (!accountId || !groupUrl) return res.status(400).json({ success: false, error: 'Thiếu accountId hoặc link nhóm' });
 
-    postToGroup({ accountId: parseInt(accountId), groupUrl, content, aiOptions })
+    postToGroup({ accountId: parseInt(accountId), groupUrl, content, imagePaths: imagePaths || [], aiOptions })
       .catch(e => console.error('Post group error:', e));
 
     res.json({ success: true, message: 'Đã gửi lệnh đăng bài vào nhóm! Trình duyệt đang thực hiện.' });

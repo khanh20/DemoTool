@@ -144,6 +144,10 @@
                   <label>Nội dung bài viết</label>
                   <textarea id="wallCustomText" class="form-input" rows="4" placeholder="Nhập nội dung bài đăng..."></textarea>
                 </div>
+              <div class="form-group">
+                <label>Đính kèm hình ảnh (Tùy chọn - Tối đa 5 ảnh)</label>
+                <input type="file" id="wallImageInput" class="form-input" multiple accept="image/*">
+                <div id="wallImagePreview" class="image-preview-strip mt-2"></div>
               </div>
               <button id="btnExecutePostWall" class="btn btn-primary w-full">
                 <i class="ph-bold ph-paper-plane-right"></i> Bắt Đầu Đăng Lên Tường
@@ -172,6 +176,10 @@
               <div class="form-group">
                 <label>Chủ đề trọng tâm (AI sẽ lồng ghép tự nhiên)</label>
                 <textarea id="groupContextExtra" class="form-input" rows="3" placeholder="Chia sẻ kinh nghiệm hữu ích, khéo léo giới thiệu sản phẩm..."></textarea>
+              <div class="form-group">
+                <label>Đính kèm hình ảnh (Tùy chọn - Tối đa 5 ảnh)</label>
+                <input type="file" id="groupImageInput" class="form-input" multiple accept="image/*">
+                <div id="groupImagePreview" class="image-preview-strip mt-2"></div>
               </div>
               <button id="btnExecutePostGroup" class="btn btn-primary w-full">
                 <i class="ph-bold ph-paper-plane-right"></i> Bắt Đầu Đăng Vào Nhóm

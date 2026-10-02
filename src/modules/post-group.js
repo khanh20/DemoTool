@@ -2,6 +2,7 @@ const db = require('../core/database');
 const { launchAccountBrowser } = require('../core/browser');
 const { generatePostContent } = require('../core/ai-content');
 const { randomDelay } = require('./post-wall');
+const fs = require('fs');
 
 /**
  * Get all groups saved for an account
@@ -28,14 +29,15 @@ function deleteGroup(id) {
 }
 
 /**
- * Post to a specific Facebook group
+ * Post to a specific Facebook group (Supports Text + Images)
  * @param {Object} params
  * @param {number} params.accountId
  * @param {string} params.groupUrl
  * @param {string} [params.content]
+ * @param {string[]} [params.imagePaths]
  * @param {Object} [params.aiOptions]
  */
-async function postToGroup({ accountId, groupUrl, content, aiOptions }) {
+async function postToGroup({ accountId, groupUrl, content, imagePaths = [], aiOptions }) {
   const account = db.prepare('SELECT * FROM accounts WHERE id = ?').get(accountId);
   if (!account) throw new Error('Không tìm thấy tài khoản');
 
@@ -48,7 +50,9 @@ async function postToGroup({ accountId, groupUrl, content, aiOptions }) {
     });
   }
 
-  if (!postText) throw new Error('Nội dung bài viết không được rỗng');
+  if (!postText && (!imagePaths || imagePaths.length === 0)) {
+    throw new Error('Nội dung bài viết hoặc hình ảnh không được để trống');
+  }
 
   const { page } = await launchAccountBrowser(account, { headless: false });
 
@@ -78,39 +82,68 @@ async function postToGroup({ accountId, groupUrl, content, aiOptions }) {
       } catch (e) {}
     }
 
-    await randomDelay(2000, 3000);
+    await randomDelay(2000, 3500);
 
-    // Typing inside group textbox
-    const inputSelectors = [
-      'div[role="dialog"] div[contenteditable="true"]',
-      'form div[contenteditable="true"]',
-      'div[contenteditable="true"][role="textbox"]'
-    ];
-
-    let typed = false;
-    for (const selector of inputSelectors) {
-      try {
-        const inputEl = await page.$(selector);
-        if (inputEl && await inputEl.isVisible()) {
-          await inputEl.click();
-          await randomDelay(500, 1000);
-
-          for (const char of postText) {
-            await page.keyboard.type(char, { delay: Math.floor(Math.random() * 50) + 30 });
+    // 1. Upload Images to Group if provided
+    if (Array.isArray(imagePaths) && imagePaths.length > 0) {
+      const validFiles = imagePaths.filter(p => fs.existsSync(p));
+      if (validFiles.length > 0) {
+        try {
+          const fileInput = await page.$('input[type="file"][accept*="image"]');
+          if (fileInput) {
+            await fileInput.setInputFiles(validFiles);
+            await randomDelay(3000, 5000);
+          } else {
+            const photoBtn = await page.$('[aria-label*="Ảnh/video"], [aria-label*="Photo/video"], div[role="button"]:has-text("Ảnh/video")');
+            if (photoBtn) {
+              await photoBtn.click();
+              await randomDelay(1500, 2500);
+              const dynamicInput = await page.$('input[type="file"][accept*="image"]');
+              if (dynamicInput) {
+                await dynamicInput.setInputFiles(validFiles);
+                await randomDelay(3000, 5000);
+              }
+            }
           }
-          typed = true;
-          break;
+        } catch (imgErr) {
+          console.warn('Group image upload warning:', imgErr.message);
         }
-      } catch (e) {}
+      }
     }
 
-    if (!typed) {
-      throw new Error('Không tìm thấy ô nhập bài trong nhóm (có thể nhóm yêu cầu duyệt trước)');
+    // 2. Typing inside group textbox
+    if (postText) {
+      const inputSelectors = [
+        'div[role="dialog"] div[contenteditable="true"]',
+        'form div[contenteditable="true"]',
+        'div[contenteditable="true"][role="textbox"]'
+      ];
+
+      let typed = false;
+      for (const selector of inputSelectors) {
+        try {
+          const inputEl = await page.$(selector);
+          if (inputEl && await inputEl.isVisible()) {
+            await inputEl.click();
+            await randomDelay(500, 1000);
+
+            for (const char of postText) {
+              await page.keyboard.type(char, { delay: Math.floor(Math.random() * 45) + 25 });
+            }
+            typed = true;
+            break;
+          }
+        } catch (e) {}
+      }
+
+      if (!typed) {
+        throw new Error('Không tìm thấy ô nhập bài trong nhóm (có thể nhóm yêu cầu duyệt trước)');
+      }
     }
 
-    await randomDelay(2000, 4000);
+    await randomDelay(2500, 4500);
 
-    // Click "Đăng" / "Post"
+    // 3. Click "Đăng" / "Post"
     const submitSelectors = [
       'div[role="dialog"] aria-label="Đăng"',
       'div[role="dialog"] div[role="button"]:has-text("Đăng")',
@@ -123,18 +156,22 @@ async function postToGroup({ accountId, groupUrl, content, aiOptions }) {
       try {
         const btn = await page.$(selector);
         if (btn && await btn.isVisible()) {
-          await btn.click();
-          break;
+          const isDisabled = await btn.getAttribute('aria-disabled');
+          if (isDisabled !== 'true') {
+            await btn.click();
+            break;
+          }
         }
       } catch (e) {}
     }
 
-    await randomDelay(4000, 6000);
+    await randomDelay(5000, 7000);
 
+    const imagePathsJson = (imagePaths && imagePaths.length > 0) ? JSON.stringify(imagePaths) : null;
     db.prepare(`
-      INSERT INTO posts (account_id, target_type, target_id, content, status, posted_at)
-      VALUES (?, 'group', ?, ?, 'success', CURRENT_TIMESTAMP)
-    `).run(accountId, groupUrl, postText);
+      INSERT INTO posts (account_id, target_type, target_id, content, image_paths, status, posted_at)
+      VALUES (?, 'group', ?, ?, ?, 'success', CURRENT_TIMESTAMP)
+    `).run(accountId, groupUrl, postText || '(Bài đăng hình ảnh)', imagePathsJson);
 
     db.prepare(`
       INSERT INTO logs (account_id, action, status, message)
@@ -147,7 +184,7 @@ async function postToGroup({ accountId, groupUrl, content, aiOptions }) {
     db.prepare(`
       INSERT INTO posts (account_id, target_type, target_id, content, status, error_message)
       VALUES (?, 'group', ?, ?, 'failed', ?)
-    `).run(accountId, groupUrl, postText, err.message);
+    `).run(accountId, groupUrl, postText || '', err.message);
 
     db.prepare(`
       INSERT INTO logs (account_id, action, status, message)

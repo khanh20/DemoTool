@@ -54,10 +54,23 @@ const likeSelectAccount = document.getElementById('likeSelectAccount');
 const likeCount = document.getElementById('likeCount');
 const btnExecuteLikeWall = document.getElementById('btnExecuteLikeWall');
 
-const groupLikeSelectAccount = document.getElementById('groupLikeSelectAccount');
-const groupLikeUrl = document.getElementById('groupLikeUrl');
-const groupLikeCount = document.getElementById('groupLikeCount');
-const btnExecuteLikeGroup = document.getElementById('btnExecuteLikeGroup');
+const wallImageInput = document.getElementById('wallImageInput');
+const groupImageInput = document.getElementById('groupImageInput');
+
+async function uploadFiles(files) {
+  if (!files || files.length === 0) return [];
+  const formData = new FormData();
+  for (let i = 0; i < files.length; i++) {
+    formData.append('images', files[i]);
+  }
+  const res = await fetch('/api/upload', {
+    method: 'POST',
+    body: formData,
+  });
+  const json = await res.json();
+  if (json.success) return json.filePaths;
+  throw new Error(json.error || 'Lỗi tải ảnh');
+}
 
 // NAVIGATION
 navItems.forEach(item => {
@@ -338,6 +351,16 @@ btnExecutePostWall.addEventListener('click', async () => {
     };
   }
 
+  // Upload image attachments if any
+  if (wallImageInput && wallImageInput.files.length > 0) {
+    showToast('Đang tải ảnh đính kèm lên máy chủ...');
+    try {
+      payload.imagePaths = await uploadFiles(wallImageInput.files);
+    } catch (err) {
+      return alert(`Lỗi tải ảnh: ${err.message}`);
+    }
+  }
+
   showToast('Đang khởi chạy Chrome và đăng bài lên tường...');
   try {
     const res = await fetch('/api/automation/post-wall', {
@@ -348,6 +371,7 @@ btnExecutePostWall.addEventListener('click', async () => {
     const json = await res.json();
     if (json.success) {
       showToast(json.message);
+      if (wallImageInput) wallImageInput.value = '';
     } else {
       showToast(json.error, true);
     }
@@ -376,6 +400,16 @@ btnExecutePostGroup.addEventListener('click', async () => {
     }
   };
 
+  // Upload image attachments if any
+  if (groupImageInput && groupImageInput.files.length > 0) {
+    showToast('Đang tải ảnh đính kèm lên máy chủ...');
+    try {
+      payload.imagePaths = await uploadFiles(groupImageInput.files);
+    } catch (err) {
+      return alert(`Lỗi tải ảnh: ${err.message}`);
+    }
+  }
+
   showToast('Đang mở Chrome để đăng bài vào nhóm...');
   try {
     const res = await fetch('/api/automation/post-group', {
@@ -386,6 +420,7 @@ btnExecutePostGroup.addEventListener('click', async () => {
     const json = await res.json();
     if (json.success) {
       showToast(json.message);
+      if (groupImageInput) groupImageInput.value = '';
     } else {
       showToast(json.error, true);
     }

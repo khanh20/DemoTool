@@ -1,6 +1,7 @@
 const db = require('../core/database');
 const { launchAccountBrowser } = require('../core/browser');
 const { generatePostContent } = require('../core/ai-content');
+const fs = require('fs');
 
 /**
  * Helper: Random delay between actions to mimic human behavior
@@ -11,13 +12,14 @@ function randomDelay(minMs = 2000, maxMs = 5000) {
 }
 
 /**
- * Post to personal wall
+ * Post to personal wall (Supports Text + Images)
  * @param {Object} params
  * @param {number} params.accountId
  * @param {string} [params.content] Custom content or empty to generate via AI
+ * @param {string[]} [params.imagePaths] Absolute local paths of images to attach
  * @param {Object} [params.aiOptions] If generating via AI: { systemInstruction, userContext }
  */
-async function postToWall({ accountId, content, aiOptions }) {
+async function postToWall({ accountId, content, imagePaths = [], aiOptions }) {
   const account = db.prepare('SELECT * FROM accounts WHERE id = ?').get(accountId);
   if (!account) throw new Error('Không tìm thấy tài khoản');
 
@@ -30,7 +32,9 @@ async function postToWall({ accountId, content, aiOptions }) {
     });
   }
 
-  if (!postText) throw new Error('Nội dung bài viết không được rỗng');
+  if (!postText && (!imagePaths || imagePaths.length === 0)) {
+    throw new Error('Nội dung bài viết hoặc hình ảnh không được để trống');
+  }
 
   const { page } = await launchAccountBrowser(account, { headless: false });
 
@@ -40,7 +44,6 @@ async function postToWall({ accountId, content, aiOptions }) {
     await randomDelay(3000, 5000);
 
     // Look for post creation box on Facebook feed
-    // Facebook has multiple selectors depending on account / language
     const postBoxSelectors = [
       '[aria-label*="Bạn đang nghĩ gì"]',
       '[aria-label*="What\'s on your mind"]',
@@ -63,46 +66,76 @@ async function postToWall({ accountId, content, aiOptions }) {
     }
 
     if (!clicked) {
-      // Try clicking via keyboard or direct focus
       await page.keyboard.press('KeyP');
       await randomDelay(1500, 2500);
     }
 
     await randomDelay(2000, 3000);
 
-    // Find the active modal text input
-    const inputSelectors = [
-      'div[role="dialog"] div[contenteditable="true"]',
-      'form div[contenteditable="true"]',
-      'div[aria-label*="Bạn đang nghĩ gì"][contenteditable="true"]',
-      'div[contenteditable="true"][role="textbox"]'
-    ];
-
-    let typed = false;
-    for (const selector of inputSelectors) {
-      try {
-        const inputEl = await page.$(selector);
-        if (inputEl && await inputEl.isVisible()) {
-          await inputEl.click();
-          await randomDelay(500, 1000);
-          
-          // Human-like typing with small variance
-          for (const char of postText) {
-            await page.keyboard.type(char, { delay: Math.floor(Math.random() * 50) + 30 });
+    // 1. Upload Images if provided
+    if (Array.isArray(imagePaths) && imagePaths.length > 0) {
+      const validFiles = imagePaths.filter(p => fs.existsSync(p));
+      if (validFiles.length > 0) {
+        try {
+          // Find photo/video file input
+          const fileInput = await page.$('input[type="file"][accept*="image"]');
+          if (fileInput) {
+            await fileInput.setInputFiles(validFiles);
+            await randomDelay(3000, 5000);
+          } else {
+            // Click photo button first to reveal input
+            const photoBtn = await page.$('[aria-label*="Ảnh/video"], [aria-label*="Photo/video"], div[role="button"]:has-text("Ảnh/video")');
+            if (photoBtn) {
+              await photoBtn.click();
+              await randomDelay(1500, 2500);
+              const dynamicInput = await page.$('input[type="file"][accept*="image"]');
+              if (dynamicInput) {
+                await dynamicInput.setInputFiles(validFiles);
+                await randomDelay(3000, 5000);
+              }
+            }
           }
-          typed = true;
-          break;
+        } catch (imgErr) {
+          console.warn('Image upload step warning:', imgErr.message);
         }
-      } catch (e) {}
+      }
     }
 
-    if (!typed) {
-      throw new Error('Không thể định vị ô nhập bài viết trên Facebook');
+    // 2. Type Post Text
+    if (postText) {
+      const inputSelectors = [
+        'div[role="dialog"] div[contenteditable="true"]',
+        'form div[contenteditable="true"]',
+        'div[aria-label*="Bạn đang nghĩ gì"][contenteditable="true"]',
+        'div[contenteditable="true"][role="textbox"]'
+      ];
+
+      let typed = false;
+      for (const selector of inputSelectors) {
+        try {
+          const inputEl = await page.$(selector);
+          if (inputEl && await inputEl.isVisible()) {
+            await inputEl.click();
+            await randomDelay(500, 1000);
+            
+            // Human-like typing variance
+            for (const char of postText) {
+              await page.keyboard.type(char, { delay: Math.floor(Math.random() * 45) + 25 });
+            }
+            typed = true;
+            break;
+          }
+        } catch (e) {}
+      }
+
+      if (!typed) {
+        throw new Error('Không thể định vị ô nhập bài viết trên Facebook');
+      }
     }
 
-    await randomDelay(2000, 4000);
+    await randomDelay(2500, 4500);
 
-    // Find and click "Đăng" / "Post" button
+    // 3. Find and click "Đăng" / "Post" button
     const submitSelectors = [
       'div[role="dialog"] aria-label="Đăng"',
       'div[role="dialog"] aria-label="Post"',
@@ -128,23 +161,23 @@ async function postToWall({ accountId, content, aiOptions }) {
     }
 
     if (!submitted) {
-      // Fallback: press Enter with Ctrl
       await page.keyboard.press('Control+Enter');
       submitted = true;
     }
 
-    await randomDelay(4000, 6000);
+    await randomDelay(5000, 7000);
 
     // Save record to DB
+    const imagePathsJson = (imagePaths && imagePaths.length > 0) ? JSON.stringify(imagePaths) : null;
     db.prepare(`
-      INSERT INTO posts (account_id, target_type, content, status, posted_at)
-      VALUES (?, 'wall', ?, 'success', CURRENT_TIMESTAMP)
-    `).run(accountId, postText);
+      INSERT INTO posts (account_id, target_type, content, image_paths, status, posted_at)
+      VALUES (?, 'wall', ?, ?, 'success', CURRENT_TIMESTAMP)
+    `).run(accountId, postText || '(Bài đăng hình ảnh)', imagePathsJson);
 
     db.prepare(`
       INSERT INTO logs (account_id, action, status, message)
       VALUES (?, 'post_wall', 'success', ?)
-    `).run(accountId, `Đã đăng bài lên tường: "${postText.substring(0, 40)}..."`);
+    `).run(accountId, `Đã đăng bài lên tường: "${(postText || 'Đính kèm ảnh').substring(0, 40)}..."`);
 
     return { success: true, content: postText };
 
@@ -152,7 +185,7 @@ async function postToWall({ accountId, content, aiOptions }) {
     db.prepare(`
       INSERT INTO posts (account_id, target_type, content, status, error_message)
       VALUES (?, 'wall', ?, 'failed', ?)
-    `).run(accountId, postText, error.message);
+    `).run(accountId, postText || '', error.message);
 
     db.prepare(`
       INSERT INTO logs (account_id, action, status, message)
