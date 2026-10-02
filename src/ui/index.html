@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Facebook Automation Manager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo-icon">⚡</div>
+        <div class="brand-text">
+          <h2>FB Commander</h2>
+          <span>AI Multi-Account Tool</span>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <button class="nav-item active" data-tab="accounts">
+          <span class="icon">👥</span>
+          <span>Quản lý Tài Khoản</span>
+        </button>
+        <button class="nav-item" data-tab="ai-prompts">
+          <span class="icon">✨</span>
+          <span>AI Prompts (Gemini)</span>
+        </button>
+        <button class="nav-item" data-tab="logs">
+          <span class="icon">📜</span>
+          <span>Nhật ký & Lịch sử</span>
+        </button>
+        <button class="nav-item" data-tab="settings">
+          <span class="icon">⚙️</span>
+          <span>Cấu hình Hệ thống</span>
+        </button>
+      </nav>
+
+      <div class="system-status-card">
+        <div class="status-indicator live"></div>
+        <div>
+          <div class="status-title">Hệ thống sẵn sàng</div>
+          <div class="status-sub">Node.js + Playwright</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Header -->
+      <header class="topbar">
+        <div class="page-title">
+          <h1 id="pageHeading">Quản lý Tài Khoản Facebook</h1>
+          <p id="pageSubheading">Quản lý 3 - 10 profile độc lập, lưu phiên đăng nhập tự động</p>
+        </div>
+        <div class="topbar-actions">
+          <button id="btnRefresh" class="btn btn-secondary">
+            <span>🔄</span> Làm mới
+          </button>
+        </div>
+      </header>
+
+      <!-- TAB 1: ACCOUNTS -->
+      <section id="tab-accounts" class="tab-pane active">
+        <div class="action-bar">
+          <button id="btnOpenAddAccount" class="btn btn-primary">
+            <span>➕</span> Thêm Tài Khoản Mới
+          </button>
+          <div class="stat-pills">
+            <span class="pill" id="totalAccountsPill">Tổng: 0 nick</span>
+            <span class="pill pill-success" id="activeAccountsPill">Đang hoạt động: 0</span>
+          </div>
+        </div>
+
+        <div class="card table-card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Tên Tài Khoản</th>
+                <th>Email / UID</th>
+                <th>Trạng Thái</th>
+                <th>Proxy</th>
+                <th>Hành Động Trình Duyệt</th>
+              </tr>
+            </thead>
+            <tbody id="accountsTableBody">
+              <tr>
+                <td colspan="6" class="text-center py-4 text-muted">Đang tải danh sách tài khoản...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TAB 2: AI PROMPTS -->
+      <section id="tab-ai-prompts" class="tab-pane">
+        <div class="grid-2col">
+          <!-- Prompt Creator -->
+          <div class="card">
+            <div class="card-header">
+              <h3>✨ Tạo Mẫu Prompt Bài Đăng (Gemini)</h3>
+            </div>
+            <div class="card-body">
+              <div class="form-group">
+                <label>Tiêu đề mẫu Prompt</label>
+                <input type="text" id="promptTitle" class="form-input" placeholder="Ví dụ: Shop Thời Trang Nữ - Bán Buôn">
+              </div>
+              <div class="form-group">
+                <label>Mục tiêu đăng bài</label>
+                <select id="promptTargetType" class="form-input">
+                  <option value="wall">Tường cá nhân</option>
+                  <option value="group">Hội nhóm (Groups)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>System Instruction (Định danh phong cách của AI)</label>
+                <textarea id="promptSystem" class="form-input" rows="4" placeholder="Bạn là một chủ shop kinh doanh thời trang nữ tính, viết status Facebook ngắn gọn, thân thiện, hài hước, có emoji..."></textarea>
+              </div>
+              <div class="form-group">
+                <label>Nội dung / Chủ đề bài viết</label>
+                <textarea id="promptContext" class="form-input" rows="3" placeholder="Giới thiệu đầm hoa nhí vừa về hàng, tặng voucher 15% cho 5 khách đầu tiên inbox"></textarea>
+              </div>
+              <div class="form-actions">
+                <button id="btnSavePrompt" class="btn btn-primary">💾 Lưu Prompt</button>
+                <button id="btnTestAI" class="btn btn-secondary">⚡ Thử Nghiệm Sinh Bài Bằng AI</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Preview & Prompt List -->
+          <div class="col-stack">
+            <div class="card" id="aiResultCard">
+              <div class="card-header">
+                <h3>📝 Kết quả AI Gemini sinh ra</h3>
+              </div>
+              <div class="card-body">
+                <div id="aiOutputContent" class="preview-box">
+                  Nhấn "Thử Nghiệm Sinh Bài Bằng AI" để xem mẫu bài viết được tạo theo thời gian thực...
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <h3>📂 Danh sách Prompt đã lưu</h3>
+              </div>
+              <div class="card-body">
+                <div id="promptsList" class="prompts-list">
+                  <p class="text-muted">Chưa có prompt nào được lưu.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: LOGS -->
+      <section id="tab-logs" class="tab-pane">
+        <div class="card">
+          <div class="card-header">
+            <h3>📜 Nhật ký hoạt động hệ thống</h3>
+          </div>
+          <div class="card-body">
+            <div class="logs-container" id="logsContainer">
+              <div class="log-entry log-info">
+                <span class="log-time">Vừa xong</span>
+                <span class="log-text">Khởi động bảng điều khiển</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: SETTINGS -->
+      <section id="tab-settings" class="tab-pane">
+        <div class="card max-w-600">
+          <div class="card-header">
+            <h3>🔑 Cấu Hình Google Gemini API Key</h3>
+          </div>
+          <div class="card-body">
+            <p class="helper-text">
+              Lấy API Key miễn phí từ <a href="https://aistudio.google.com/app/apikey" target="_blank" class="link">Google AI Studio</a>.
+              API Key giúp AI viết bài tự nhiên theo ngữ cảnh từng ngày/giờ.
+            </p>
+            <div class="form-group mt-3">
+              <label>Gemini API Key</label>
+              <div class="input-with-button">
+                <input type="password" id="geminiApiKeyInput" class="form-input" placeholder="AIzaSy...">
+                <button id="btnSaveApiKey" class="btn btn-primary">Lưu Key</button>
+              </div>
+              <div id="keyStatusBadge" class="mt-2"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODAL: ADD ACCOUNT -->
+  <div id="modalAddAccount" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Thêm Tài Khoản Facebook</h3>
+        <button class="btn-close" id="btnCloseAddModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Tên gợi nhớ (Bắt buộc)</label>
+          <input type="text" id="accName" class="form-input" placeholder="Ví dụ: Nick 1 - Bán Đồ Ăn">
+        </div>
+        <div class="form-group">
+          <label>Email / SĐT / UID (Tùy chọn)</label>
+          <input type="text" id="accEmail" class="form-input" placeholder="user@gmail.com">
+        </div>
+        <div class="form-group">
+          <label>Mật khẩu (Tùy chọn)</label>
+          <input type="password" id="accPass" class="form-input" placeholder="••••••••">
+        </div>
+        <div class="form-group">
+          <label>Proxy (Tùy chọn - Định dạng IP:Port hoặc IP:Port@user@pass)</label>
+          <input type="text" id="accProxy" class="form-input" placeholder="123.45.67.89:8080">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btnCancelAddModal">Hủy</button>
+        <button class="btn btn-primary" id="btnSubmitAddAccount">Tạo Tài Khoản</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

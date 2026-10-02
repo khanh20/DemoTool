@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Environment variables & API keys
+.env
+.env.local
+*.env
+
+# SQLite Database & User Profiles (Session, Cookies, Cache)
+data/
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+
+# Playwright browser downloads & artifacts
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# OS and Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log

@@ -1,0 +1,479 @@
+// State
+let accounts = [];
+let prompts = [];
+
+// DOM Elements
+const navItems = document.querySelectorAll('.nav-item');
+const tabPanes = document.querySelectorAll('.tab-pane');
+const pageHeading = document.getElementById('pageHeading');
+const pageSubheading = document.getElementById('pageSubheading');
+const btnRefresh = document.getElementById('btnRefresh');
+
+const accountsTableBody = document.getElementById('accountsTableBody');
+const totalAccountsPill = document.getElementById('totalAccountsPill');
+const activeAccountsPill = document.getElementById('activeAccountsPill');
+
+const modalAddAccount = document.getElementById('modalAddAccount');
+const btnOpenAddAccount = document.getElementById('btnOpenAddAccount');
+const btnCloseAddModal = document.getElementById('btnCloseAddModal');
+const btnCancelAddModal = document.getElementById('btnCancelAddModal');
+const btnSubmitAddAccount = document.getElementById('btnSubmitAddAccount');
+
+const geminiApiKeyInput = document.getElementById('geminiApiKeyInput');
+const btnSaveApiKey = document.getElementById('btnSaveApiKey');
+const keyStatusBadge = document.getElementById('keyStatusBadge');
+
+const promptTitle = document.getElementById('promptTitle');
+const promptTargetType = document.getElementById('promptTargetType');
+const promptSystem = document.getElementById('promptSystem');
+const promptContext = document.getElementById('promptContext');
+const btnSavePrompt = document.getElementById('btnSavePrompt');
+const btnTestAI = document.getElementById('btnTestAI');
+const aiOutputContent = document.getElementById('aiOutputContent');
+const promptsList = document.getElementById('promptsList');
+
+const logsContainer = document.getElementById('logsContainer');
+
+// NAVIGATION
+navItems.forEach(item => {
+  item.addEventListener('click', () => {
+    const tabName = item.getAttribute('data-tab');
+
+    navItems.forEach(i => i.classList.remove('active'));
+    tabPanes.forEach(p => p.classList.remove('active'));
+
+    item.classList.add('active');
+    document.getElementById(`tab-${tabName}`).classList.add('active');
+
+    // Update titles
+    switch (tabName) {
+      case 'accounts':
+        pageHeading.textContent = 'Quản lý Tài Khoản Facebook';
+        pageSubheading.textContent = 'Quản lý profile độc lập, mở Chrome hiển thị, tự lưu Cookie';
+        loadAccounts();
+        break;
+      case 'ai-prompts':
+        pageHeading.textContent = 'AI Prompts Sinh Bài Tự Động';
+        pageSubheading.textContent = 'Cấu hình prompt Google Gemini để sinh status như người thật';
+        loadPrompts();
+        break;
+      case 'logs':
+        pageHeading.textContent = 'Nhật Ký & Hoạt Động';
+        pageSubheading.textContent = 'Theo dõi chi tiết các tác vụ login, tương tác, kiểm tra trạng thái';
+        loadLogs();
+        break;
+      case 'settings':
+        pageHeading.textContent = 'Cấu Hình Hệ Thống';
+        pageSubheading.textContent = 'Quản lý Gemini API Key và các thông số vận hành';
+        loadSettings();
+        break;
+    }
+  });
+});
+
+// TOAST NOTIFICATION
+function showToast(msg, isError = false) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.style.borderColor = isError ? 'var(--danger)' : 'var(--primary)';
+  toast.style.display = 'block';
+  setTimeout(() => {
+    toast.style.display = 'none';
+  }, 4000);
+}
+
+// ==========================
+// ACCOUNTS LOGIC
+// ==========================
+async function loadAccounts() {
+  try {
+    const res = await fetch('/api/accounts');
+    const json = await res.json();
+    if (json.success) {
+      accounts = json.data;
+      renderAccountsTable();
+    }
+  } catch (err) {
+    showToast('Không tải được danh sách nick', true);
+  }
+}
+
+function renderAccountsTable() {
+  totalAccountsPill.textContent = `Tổng: ${accounts.length} nick`;
+  const activeCount = accounts.filter(a => a.status === 'active').length;
+  activeAccountsPill.textContent = `Đang hoạt động: ${activeCount}`;
+
+  if (accounts.length === 0) {
+    accountsTableBody.innerHTML = `
+      <tr>
+        <td colspan="6" class="text-center py-4 text-muted">
+          Chưa có tài khoản Facebook nào. Hãy bấm <b>Thêm Tài Khoản Mới</b> để bắt đầu.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  accountsTableBody.innerHTML = accounts.map(acc => {
+    let badgeClass = 'badge-unverified';
+    let statusText = 'Chưa đăng nhập';
+    if (acc.status === 'active') {
+      badgeClass = 'badge-active';
+      statusText = 'Live / Sẵn sàng';
+    } else if (acc.status === 'checkpoint') {
+      badgeClass = 'badge-checkpoint';
+      statusText = 'Checkpoint';
+    } else if (acc.status === 'error') {
+      badgeClass = 'badge-error';
+      statusText = 'Lỗi';
+    }
+
+    return `
+      <tr>
+        <td>#${acc.id}</td>
+        <td><b>${escapeHtml(acc.name)}</b></td>
+        <td>${escapeHtml(acc.email || '—')}</td>
+        <td><span class="badge ${badgeClass}">${statusText}</span></td>
+        <td>${acc.proxy ? `<code>${escapeHtml(acc.proxy)}</code>` : '<span class="text-muted">Không proxy</span>'}</td>
+        <td>
+          <div class="table-actions">
+            <button class="btn btn-primary btn-sm" onclick="openLoginBrowser(${acc.id})" title="Mở trình duyệt Chrome hiển thị">
+              🌐 Mở Chrome Đăng Nhập
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="checkStatus(${acc.id})" title="Kiểm tra trạng thái Cookie">
+              🔍 Check
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="closeBrowser(${acc.id})" title="Đóng Chrome">
+              ✖️ Đóng
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="deleteAccount(${acc.id})" title="Xóa tài khoản">
+              🗑️
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// Open Chrome for user login
+window.openLoginBrowser = async function(id) {
+  showToast('Đang khởi chạy Chrome...');
+  try {
+    const res = await fetch(`/api/accounts/${id}/open-login`, { method: 'POST' });
+    const json = await res.json();
+    if (json.success) {
+      showToast('Đã mở Chrome! Hãy đăng nhập trên trình duyệt vừa xuất hiện.');
+      // Auto refresh list after 10s to see if status updated
+      setTimeout(loadAccounts, 10000);
+    } else {
+      showToast(json.error || 'Lỗi mở trình duyệt', true);
+    }
+  } catch (e) {
+    showToast(e.message, true);
+  }
+};
+
+window.checkStatus = async function(id) {
+  showToast('Đang kiểm tra phiên đăng nhập...');
+  try {
+    const res = await fetch(`/api/accounts/${id}/check-status`, { method: 'POST' });
+    const json = await res.json();
+    if (json.success) {
+      showToast(`Trạng thái: ${json.data.message}`);
+      loadAccounts();
+    } else {
+      showToast(json.error || 'Lỗi kiểm tra', true);
+    }
+  } catch (e) {
+    showToast(e.message, true);
+  }
+};
+
+window.closeBrowser = async function(id) {
+  try {
+    const res = await fetch(`/api/accounts/${id}/close-browser`, { method: 'POST' });
+    const json = await res.json();
+    if (json.success) {
+      showToast('Đã đóng trình duyệt');
+    }
+  } catch (e) {
+    showToast(e.message, true);
+  }
+};
+
+window.deleteAccount = async function(id) {
+  if (!confirm('Bạn có chắc chắn muốn xóa tài khoản này và profile tương ứng?')) return;
+  try {
+    const res = await fetch(`/api/accounts/${id}`, { method: 'DELETE' });
+    const json = await res.json();
+    if (json.success) {
+      showToast('Đã xóa tài khoản');
+      loadAccounts();
+    }
+  } catch (e) {
+    showToast(e.message, true);
+  }
+};
+
+// Modal handlers
+btnOpenAddAccount.addEventListener('click', () => {
+  document.getElementById('accName').value = '';
+  document.getElementById('accEmail').value = '';
+  document.getElementById('accPass').value = '';
+  document.getElementById('accProxy').value = '';
+  modalAddAccount.classList.add('open');
+});
+
+function closeAddModal() {
+  modalAddAccount.classList.remove('open');
+}
+btnCloseAddModal.addEventListener('click', closeAddModal);
+btnCancelAddModal.addEventListener('click', closeAddModal);
+
+btnSubmitAddAccount.addEventListener('click', async () => {
+  const name = document.getElementById('accName').value.trim();
+  const email = document.getElementById('accEmail').value.trim();
+  const password = document.getElementById('accPass').value.trim();
+  const proxy = document.getElementById('accProxy').value.trim();
+
+  if (!name) {
+    alert('Vui lòng nhập tên tài khoản');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/accounts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password, proxy })
+    });
+    const json = await res.json();
+    if (json.success) {
+      showToast('Tạo tài khoản thành công!');
+      closeAddModal();
+      loadAccounts();
+    } else {
+      alert(json.error || 'Có lỗi xảy ra');
+    }
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
+// ==========================
+// AI & PROMPT LOGIC
+// ==========================
+async function loadPrompts() {
+  try {
+    const res = await fetch('/api/prompts');
+    const json = await res.json();
+    if (json.success) {
+      prompts = json.data;
+      renderPromptsList();
+    }
+  } catch (err) {
+    showToast('Lỗi tải danh sách prompts', true);
+  }
+}
+
+function renderPromptsList() {
+  if (prompts.length === 0) {
+    promptsList.innerHTML = '<p class="text-muted">Chưa có prompt nào được lưu.</p>';
+    return;
+  }
+
+  promptsList.innerHTML = prompts.map(p => `
+    <div class="prompt-item">
+      <div>
+        <div class="prompt-title">${escapeHtml(p.title)}</div>
+        <div class="prompt-badge">Đăng lên: ${p.target_type === 'wall' ? 'Tường' : 'Group'}</div>
+      </div>
+      <div>
+        <button class="btn btn-secondary btn-sm" onclick="applyPrompt(${p.id})">Áp dụng</button>
+        <button class="btn btn-danger btn-sm" onclick="deletePrompt(${p.id})">Xóa</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+window.applyPrompt = function(id) {
+  const p = prompts.find(item => item.id === id);
+  if (!p) return;
+  promptTitle.value = p.title;
+  promptTargetType.value = p.target_type;
+  promptSystem.value = p.system_instruction;
+  promptContext.value = p.user_context || '';
+  showToast(`Đã nạp prompt: ${p.title}`);
+};
+
+window.deletePrompt = async function(id) {
+  if (!confirm('Bạn có muốn xóa prompt này?')) return;
+  try {
+    const res = await fetch(`/api/prompts/${id}`, { method: 'DELETE' });
+    const json = await res.json();
+    if (json.success) {
+      showToast('Đã xóa prompt');
+      loadPrompts();
+    }
+  } catch (e) {
+    showToast(e.message, true);
+  }
+};
+
+btnSavePrompt.addEventListener('click', async () => {
+  const title = promptTitle.value.trim();
+  const targetType = promptTargetType.value;
+  const systemInstruction = promptSystem.value.trim();
+  const userContext = promptContext.value.trim();
+
+  if (!title || !systemInstruction) {
+    alert('Vui lòng nhập Tiêu đề và System Instruction');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/prompts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, targetType, systemInstruction, userContext })
+    });
+    const json = await res.json();
+    if (json.success) {
+      showToast('Đã lưu mẫu Prompt thành công!');
+      loadPrompts();
+    } else {
+      alert(json.error);
+    }
+  } catch (e) {
+    alert(e.message);
+  }
+});
+
+btnTestAI.addEventListener('click', async () => {
+  const systemInstruction = promptSystem.value.trim();
+  const userContext = promptContext.value.trim();
+  const targetType = promptTargetType.value;
+
+  if (!systemInstruction) {
+    alert('Vui lòng nhập System Instruction trước khi thử nghiệm');
+    return;
+  }
+
+  aiOutputContent.textContent = '⏳ Đang gọi Gemini AI sinh bài viết theo thời gian thực...';
+
+  try {
+    const res = await fetch('/api/ai/preview-generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ systemInstruction, userContext, targetType })
+    });
+    const json = await res.json();
+    if (json.success) {
+      aiOutputContent.textContent = json.content;
+      showToast('AI đã sinh bài thành công!');
+    } else {
+      aiOutputContent.textContent = `❌ Lỗi: ${json.error}`;
+      showToast(json.error, true);
+    }
+  } catch (e) {
+    aiOutputContent.textContent = `❌ Lỗi kết nối: ${e.message}`;
+  }
+});
+
+// ==========================
+// SETTINGS LOGIC
+// ==========================
+async function loadSettings() {
+  try {
+    const res = await fetch('/api/settings/gemini-key');
+    const json = await res.json();
+    if (json.success) {
+      if (json.hasKey) {
+        keyStatusBadge.innerHTML = `<span class="badge badge-active">✅ Đã cấu hình Key (${json.maskedKey})</span>`;
+      } else {
+        keyStatusBadge.innerHTML = '<span class="badge badge-unverified">⚠️ Chưa cài đặt Key (Chưa thể dùng AI)</span>';
+      }
+    }
+  } catch (e) {}
+}
+
+btnSaveApiKey.addEventListener('click', async () => {
+  const key = geminiApiKeyInput.value.trim();
+  if (!key) {
+    alert('Vui lòng dán Gemini API Key');
+    return;
+  }
+  try {
+    const res = await fetch('/api/settings/gemini-key', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key })
+    });
+    const json = await res.json();
+    if (json.success) {
+      showToast('Đã lưu Gemini API Key');
+      geminiApiKeyInput.value = '';
+      loadSettings();
+    } else {
+      alert(json.error);
+    }
+  } catch (e) {
+    alert(e.message);
+  }
+});
+
+// ==========================
+// LOGS LOGIC
+// ==========================
+async function loadLogs() {
+  try {
+    const res = await fetch('/api/logs?limit=40');
+    const json = await res.json();
+    if (json.success) {
+      if (json.data.length === 0) {
+        logsContainer.innerHTML = '<p class="text-muted p-3">Chưa có nhật ký nào.</p>';
+        return;
+      }
+      logsContainer.innerHTML = json.data.map(log => {
+        let statusClass = 'log-info';
+        if (log.status === 'success') statusClass = 'log-success';
+        if (log.status === 'warning') statusClass = 'log-warning';
+        if (log.status === 'error') statusClass = 'log-error';
+
+        const time = new Date(log.created_at).toLocaleTimeString('vi-VN');
+        const accTag = log.account_name ? `<b>[${escapeHtml(log.account_name)}]</b> ` : '';
+
+        return `
+          <div class="log-entry ${statusClass}">
+            <span class="log-time">${time}</span>
+            <span class="log-text">${accTag}${escapeHtml(log.message)}</span>
+          </div>
+        `;
+      }).join('');
+    }
+  } catch (e) {}
+}
+
+// REFRESH BUTTON
+btnRefresh.addEventListener('click', () => {
+  loadAccounts();
+  loadLogs();
+  showToast('Đã làm mới dữ liệu');
+});
+
+// UTILITY
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/[&<>"']/g, m => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  })[m]);
+}
+
+// INITIAL LOAD
+loadAccounts();
+loadSettings();
