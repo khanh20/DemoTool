@@ -98,9 +98,10 @@ app.delete('/api/accounts/:id', (req, res) => {
 app.post('/api/accounts/:id/open-login', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    accountManager.openLoginSession(id).catch(e => console.error('Login session error:', e));
-    res.json({ success: true, message: 'Đang mở Chrome để bạn đăng nhập...' });
+    await accountManager.openLoginSession(id);
+    res.json({ success: true, message: 'Đã mở Chrome thành công! Vui lòng đăng nhập trên cửa sổ Chrome vừa hiện.' });
   } catch (err) {
+    console.error('Login session error:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 });

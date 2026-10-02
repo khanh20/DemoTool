@@ -20,6 +20,17 @@ async function launchAccountBrowser(account, options = {}) {
 
   if (!fs.existsSync(profilePath)) {
     fs.mkdirSync(profilePath, { recursive: true });
+  } else {
+    // Clean stale lock files from previous unexpected shutdowns
+    const lockFiles = ['lockfile', 'SingletonLock', 'SingletonCookie', 'SingletonSocket'];
+    for (const lf of lockFiles) {
+      const fullPath = path.join(profilePath, lf);
+      if (fs.existsSync(fullPath)) {
+        try {
+          fs.unlinkSync(fullPath);
+        } catch (e) {}
+      }
+    }
   }
 
   // If already active and not closed, reuse context
